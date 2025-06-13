@@ -1,0 +1,40 @@
+<!-- auth/login.html -->
+<!DOCTYPE html>
+<html>
+<head><title>Login</title></head>
+<body>
+  <h2>Login</h2>
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
+  <button id="login-btn">Login</button>
+
+  <script>
+    const apiBase = 'http://mpmc.ddns.net:5000/api/auth'; // your backend
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = params.get('redirect');
+
+    document.getElementById('login-btn').onclick = async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch(`${apiBase}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Redirect back with token + userId
+        const url = new URL(redirectTo);
+        url.searchParams.set('token', data.token);
+        url.searchParams.set('userId', data.userId);
+        window.location.href = url.toString();
+      } else {
+        alert('Login failed');
+      }
+    };
+  </script>
+</body>
+</html>
