@@ -36,7 +36,22 @@
       margin: 0 auto 1.5rem auto;
       max-width: 200px;
       height: auto;
+      top: -40px;
+      position: relative;
     }
+
+    .subtitle {
+        font-size: 2rem;
+        color: #000000;
+        text-align: center;
+        margin-top: 0rem;
+        letter-spacing: 1px;
+        position: absolute;
+        top: 200px;
+        font-weight: bold;
+        right: 33px;
+    }
+
 
     /* Toggle buttons container */
     .toggle-buttons {
@@ -120,11 +135,13 @@
       color: #d33;
       font-weight: 600;
     }
+
   </style>
 </head>
 <body>
   <div class="login-container">
     <img src="C2.png" alt="Brand logo" class="brand-logo">
+    <p class="subtitle">Continental ID</p>
     <div class="toggle-buttons">
       <button id="login-toggle" class="toggle-btn selected">Login</button>
       <button id="register-toggle" class="toggle-btn">Register</button>
@@ -186,11 +203,14 @@
         const data = await res.json();
 
         if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('userId', data.userId);
-          statusDiv.style.color = 'green';
-          statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
-          // redirect or whatever
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userId', data.userId);
+            statusDiv.style.color = 'green';
+            statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
+            // redirect back to original site:
+            window.location.href = redirectUrl;
+        
+
         } else {
           statusDiv.style.color = '#d33';
           statusDiv.textContent = data.message || 'Login failed';
@@ -202,33 +222,33 @@
     };
 
     document.getElementById('register-btn').onclick = async () => {
-      const email = document.getElementById('register-email').value;
-      const password = document.getElementById('register-password').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
 
-      try {
-        const res = await fetch(`${apiBase}/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
+        try {
+            const res = await fetch(`${apiBase}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
         if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('userId', data.userId);
-          statusDiv.style.color = 'green';
-          statusDiv.textContent = `Registered & logged in as user ID: ${data.userId}`;
-          // redirect or whatever
-        } else {
-          statusDiv.style.color = '#d33';
-          statusDiv.textContent = data.message || 'Registration failed';
+            // Don’t store token or userId yet!
+            statusDiv.style.color = 'green';
+            statusDiv.textContent = 'Registered successfully! Please check your email to verify your account before logging in.';
+            switchToLogin();  // Optional: switch user to login tab after registering
+            } else {
+            statusDiv.style.color = '#d33';
+            statusDiv.textContent = data.message || 'Registration failed';
+            }
+        } catch (err) {
+            statusDiv.style.color = '#d33';
+            statusDiv.textContent = 'Registration error: ' + err.message;
         }
-      } catch (err) {
-        statusDiv.style.color = '#d33';
-        statusDiv.textContent = 'Registration error: ' + err.message;
-      }
     };
+
   </script>
 </body>
 </html>
