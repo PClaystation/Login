@@ -165,16 +165,12 @@
   <script>
     const apiBase = 'https://mpmc.ddns.net:5000/api/auth';
     const statusDiv = document.getElementById('status');
-  
+
     const loginToggle = document.getElementById('login-toggle');
     const registerToggle = document.getElementById('register-toggle');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
-  
-    // Grab redirect URL from query param or default to "/"
-    const urlParams = new URLSearchParams(window.location.search);
-    const redirectUrl = urlParams.get('redirect') || '/';
-  
+
     function switchToLogin() {
       loginToggle.classList.add('selected');
       registerToggle.classList.remove('selected');
@@ -189,31 +185,29 @@
       loginForm.classList.add('hidden');
       statusDiv.textContent = '';
     }
-  
+
     loginToggle.addEventListener('click', switchToLogin);
     registerToggle.addEventListener('click', switchToRegister);
-  
+
     document.getElementById('login-btn').onclick = async () => {
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
-  
+
       try {
         const res = await fetch(`${apiBase}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
-  
+
         const data = await res.json();
-  
+
         if (res.ok) {
           localStorage.setItem('token', data.token);
           localStorage.setItem('userId', data.userId);
           statusDiv.style.color = 'green';
           statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
-  
-          // Redirect back to original site
-          window.location.href = redirectUrl;
+          // redirect or whatever
         } else {
           statusDiv.style.color = '#d33';
           statusDiv.textContent = data.message || 'Login failed';
@@ -223,26 +217,26 @@
         statusDiv.textContent = 'Login error: ' + err.message;
       }
     };
-  
+
     document.getElementById('register-btn').onclick = async () => {
       const email = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
-  
+
       try {
         const res = await fetch(`${apiBase}/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
-  
+
         const data = await res.json();
-  
+
         if (res.ok) {
-          // Don’t store token or userId yet!
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('userId', data.userId);
           statusDiv.style.color = 'green';
-          statusDiv.textContent =
-            'Registered successfully! Please check your email to verify your account before logging in.';
-          switchToLogin(); // Optional: switch user to login tab after registering
+          statusDiv.textContent = `Registered & logged in as user ID: ${data.userId}`;
+          // redirect or whatever
         } else {
           statusDiv.style.color = '#d33';
           statusDiv.textContent = data.message || 'Registration failed';
@@ -253,6 +247,5 @@
       }
     };
   </script>
-  
 </body>
 </html>
