@@ -171,6 +171,10 @@
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
 
+    // Grab redirect URL from query param or default to "/"
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectUrl = urlParams.get('redirect') || '/';
+
     function switchToLogin() {
       loginToggle.classList.add('selected');
       registerToggle.classList.remove('selected');
@@ -207,7 +211,7 @@
           localStorage.setItem('userId', data.userId);
           statusDiv.style.color = 'green';
           statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
-          // redirect or whatever
+          window.location.href = redirectUrl;
         } else {
           statusDiv.style.color = '#d33';
           statusDiv.textContent = data.message || 'Login failed';
