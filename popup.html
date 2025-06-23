@@ -222,7 +222,13 @@
           statusDiv.style.color = 'green';
           statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
           // Redirect with token and userId in URL
-          window.location.href = buildRedirectUrl(redirectUrl, data.token, data.userId);
+          window.opener.postMessage({
+            type: 'LOGIN_SUCCESS',
+            token: data.token,
+            userId: data.userId
+            }, 'https://pclaystation.github.io');
+
+            window.close();
         } else {
           statusDiv.style.color = '#d33';
           statusDiv.textContent = data.message || 'Login failed';
@@ -254,7 +260,13 @@
           statusDiv.style.color = 'green';
           statusDiv.textContent = `Registered & logged in as user ID: ${data.userId}`;
           // Redirect with token and userId in URL
-          window.location.href = buildRedirectUrl(redirectUrl, data.token, data.userId);
+          window.opener.postMessage({
+            type: 'LOGIN_SUCCESS',
+            token: data.token,
+            userId: data.userId
+            }, 'https://pclaystation.github.io');
+
+            window.close();
         } else {
           statusDiv.style.color = '#d33';
           statusDiv.textContent = data.message || 'Registration failed';
@@ -264,6 +276,7 @@
         statusDiv.textContent = 'Registration error: ' + err.message;
       }
     };
+
     async function refreshAccessToken() {
         try {
             const res = await fetch(`${apiBase}/refresh_token`, {
