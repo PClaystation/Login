@@ -217,22 +217,24 @@
         const data = await res.json();
     
         if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('userId', data.userId);
-          statusDiv.style.color = 'green';
-          statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
-          // Redirect with token and userId in URL
-          window.opener.postMessage({
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', data.userId);
+        statusDiv.style.color = 'green';
+        statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
+
+        if (window.opener) {
+            window.opener.postMessage({
             type: 'LOGIN_SUCCESS',
             token: data.token,
             userId: data.userId
             }, '*');
-
             window.close();
         } else {
-          statusDiv.style.color = '#d33';
-          statusDiv.textContent = data.message || 'Login failed';
+            // fallback if no opener
+            window.location.href = buildRedirectUrl(redirectUrl, data.token, data.userId);
         }
+        }
+
       } catch (err) {
         statusDiv.style.color = '#d33';
         statusDiv.textContent = 'Login error: ' + err.message;
@@ -255,22 +257,24 @@
         const data = await res.json();
     
         if (res.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('userId', data.userId);
-          statusDiv.style.color = 'green';
-          statusDiv.textContent = `Registered & logged in as user ID: ${data.userId}`;
-          // Redirect with token and userId in URL
-          window.opener.postMessage({
-            type: 'LOGIN_SUCCESS',
-            token: data.token,
-            userId: data.userId
-            }, '*');
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userId', data.userId);
+            statusDiv.style.color = 'green';
+            statusDiv.textContent = `Logged in as user ID: ${data.userId}`;
 
-            window.close();
-        } else {
-          statusDiv.style.color = '#d33';
-          statusDiv.textContent = data.message || 'Registration failed';
-        }
+            if (window.opener) {
+                window.opener.postMessage({
+                type: 'LOGIN_SUCCESS',
+                token: data.token,
+                userId: data.userId
+                }, '*');
+                window.close();
+            } else {
+                // fallback if no opener
+                window.location.href = buildRedirectUrl(redirectUrl, data.token, data.userId);
+            }
+            }
+
       } catch (err) {
         statusDiv.style.color = '#d33';
         statusDiv.textContent = 'Registration error: ' + err.message;
