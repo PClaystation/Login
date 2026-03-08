@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verify Your Email</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #565656, #282828);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      margin: 0;
+      text-align: center;
+      padding: 2rem;
+    }
+    .container {
+      background: #222;
+      padding: 2rem 3rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      max-width: 400px;
+      width: 100%;
+    }
+    .status {
+      margin-top: 1.5rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Please Verify Your Email</h1>
+    <p>We've sent a verification link to your email address.</p>
+    <p>Check your inbox and click the link to verify your account.</p>
+    <p class="status" id="status">Waiting for verification...</p>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+
+    // Get email from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email');
+
+    if (!email) {
+      statusEl.textContent = 'No email provided.';
+      statusEl.style.color = 'red';
+      throw new Error('No email provided in URL');
+    }
+
+    async function checkVerification() {
+      try {
+        const res = await fetch(`https://mpmc.ddns.net:5000/api/auth/check-verification?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+
+        if (res.ok && data.verified) {
+          statusEl.style.color = 'lightgreen';
+          statusEl.textContent = 'Email verified! Logging you in...';
+
+          // Auto login now (you could also redirect user to login page if you want)
+          const loginRes = await fetch(`https://mpmc.ddns.net:5000/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: 'YOUR_PASSWORD_HERE' }) // <-- You can't do this unless you saved password somewhere, better to redirect to login or handle tokens differently.
+          });
+
+          if (loginRes.ok) {
+            const loginData = await loginRes.json();
+            localStorage.setItem('token', loginData.token);
+            localStorage.setItem('userId', loginData.userId);
+
+            statusEl.textContent = 'Logged in! Redirecting...';
+            setTimeout(() => {
+              window.location.href = '/dashboard.html'; // Your post-login page
+            }, 1500);
+          } else {
+            statusEl.style.color = 'yellow';
+            statusEl.textContent = 'Verified! Please log in manually.';
+          }
+
+          clearInterval(polling);
+        } else if (!data.verified) {
+          statusEl.textContent = 'Waiting for verification...';
+        } else {
+          statusEl.style.color = 'red';
+          statusEl.textContent = data.message || 'Error checking verification.';
+        }
+      } catch (err) {
+        statusEl.style.color = 'red';
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    // Poll every 3 seconds
+    const polling = setInterval(checkVerification, 3000);
+    checkVerification();
+  </script>
+</body>
+</html>
