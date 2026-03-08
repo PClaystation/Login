@@ -159,6 +159,7 @@
     </form>
 
     <form id="register-form" class="hidden" novalidate>
+      <input type="text" id="register-display-name" placeholder="Display name (optional)" maxlength="60" autocomplete="nickname" />
       <input type="email" id="register-email" placeholder="Email" autocomplete="email" required />
       <input type="password" id="register-password" placeholder="Password" autocomplete="new-password" required />
       <p class="password-hint">Use 8+ chars with uppercase, lowercase, and number.</p>
@@ -342,6 +343,7 @@
     registerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
 
+      const displayName = document.getElementById('register-display-name').value.trim();
       const email = document.getElementById('register-email').value.trim();
       const password = document.getElementById('register-password').value;
 
@@ -350,7 +352,7 @@
         return;
       }
 
-      await requestAuth('/register', { email, password }, registerBtn);
+      await requestAuth('/register', { displayName, email, password }, registerBtn);
     });
   </script>
 </body>
