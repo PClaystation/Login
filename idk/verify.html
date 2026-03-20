@@ -68,10 +68,16 @@
         return 'http://localhost:5000';
       }
 
-      return window.location.origin;
+      if (window.location.hostname === 'mpmc.ddns.net' && window.location.port === '5000') {
+        return window.location.origin;
+      }
+
+      return 'https://mpmc.ddns.net:5000';
     };
 
-    const API_BASE_URL = trimTrailingSlash(window.__API_BASE_URL__ || getDefaultApiBaseUrl());
+    const API_BASE_URL = trimTrailingSlash(
+      params.get('apiBaseUrl') || window.__API_BASE_URL__ || localStorage.getItem('apiBaseUrl') || getDefaultApiBaseUrl()
+    );
     const AUTH_API_BASE = `${API_BASE_URL}/api/auth`;
 
     const descriptionEl = document.getElementById('description');
