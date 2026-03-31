@@ -3,101 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Verify Your Email</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #565656, #282828);
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      margin: 0;
-      text-align: center;
-      padding: 2rem;
-    }
-    .container {
-      background: #222;
-      padding: 2rem 3rem;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      max-width: 400px;
-      width: 100%;
-    }
-    .status {
-      margin-top: 1.5rem;
-      font-weight: 600;
-    }
-  </style>
+  <title>Email Verification | Continental ID</title>
+  <link rel="stylesheet" href="auth.css" />
 </head>
-<body>
-  <div class="container">
-    <h1>Please Verify Your Email</h1>
-    <p>We've sent a verification link to your email address.</p>
-    <p>Check your inbox and click the link to verify your account.</p>
-    <p class="status" id="status">Waiting for verification...</p>
-  </div>
+<body class="auth-page">
+  <main class="auth-single">
+    <section class="auth-brand">
+      <div class="auth-brand-logo" aria-hidden="true">
+        <img src="C2.png" alt="" />
+      </div>
+      <p class="auth-eyebrow">Verification</p>
+      <h1>Confirm your email before you sign in.</h1>
+      <p class="auth-brand-copy">
+        Verification keeps the account tied to a real inbox and prevents incomplete sign-ins from lingering.
+      </p>
+      <ul class="auth-brand-list" aria-label="Verification details">
+        <li>Secure email confirmation</li>
+        <li>Works with the same login route as the popup</li>
+        <li>Return to sign-in immediately after success</li>
+      </ul>
+    </section>
 
-  <script>
-    const statusEl = document.getElementById('status');
+    <section class="auth-panel">
+      <div class="auth-panel-heading">
+        <p class="auth-eyebrow">Email verification</p>
+        <h2 id="heading">Checking your verification link</h2>
+        <p id="description" class="auth-panel-copy">We are validating the token from your email.</p>
+      </div>
 
-    // Get email from URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const email = urlParams.get('email');
+      <div id="status" class="status-banner" data-status="info" aria-live="polite" aria-atomic="true"></div>
 
-    if (!email) {
-      statusEl.textContent = 'No email provided.';
-      statusEl.style.color = 'red';
-      throw new Error('No email provided in URL');
-    }
+      <div class="page-links">
+        <a id="login-link" href="popup.html">Open login</a>
+      </div>
+    </section>
+  </main>
 
-    async function checkVerification() {
-      try {
-        const res = await fetch(`https://mpmc.ddns.net:5000/api/auth/check-verification?email=${encodeURIComponent(email)}`);
-        const data = await res.json();
-
-        if (res.ok && data.verified) {
-          statusEl.style.color = 'lightgreen';
-          statusEl.textContent = 'Email verified! Logging you in...';
-
-          // Auto login now (you could also redirect user to login page if you want)
-          const loginRes = await fetch(`https://mpmc.ddns.net:5000/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password: 'YOUR_PASSWORD_HERE' }) // <-- You can't do this unless you saved password somewhere, better to redirect to login or handle tokens differently.
-          });
-
-          if (loginRes.ok) {
-            const loginData = await loginRes.json();
-            localStorage.setItem('token', loginData.token);
-            localStorage.setItem('userId', loginData.userId);
-
-            statusEl.textContent = 'Logged in! Redirecting...';
-            setTimeout(() => {
-              window.location.href = '/dashboard.html'; // Your post-login page
-            }, 1500);
-          } else {
-            statusEl.style.color = 'yellow';
-            statusEl.textContent = 'Verified! Please log in manually.';
-          }
-
-          clearInterval(polling);
-        } else if (!data.verified) {
-          statusEl.textContent = 'Waiting for verification...';
-        } else {
-          statusEl.style.color = 'red';
-          statusEl.textContent = data.message || 'Error checking verification.';
-        }
-      } catch (err) {
-        statusEl.style.color = 'red';
-        statusEl.textContent = 'Error: ' + err.message;
-      }
-    }
-
-    // Poll every 3 seconds
-    const polling = setInterval(checkVerification, 3000);
-    checkVerification();
-  </script>
+  <script src="auth-config.js"></script>
+  <script src="verify.js"></script>
 </body>
 </html>
