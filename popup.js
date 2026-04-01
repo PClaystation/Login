@@ -12,10 +12,102 @@ const HOSTED_API_BASE_URL =
 const API_BASE_STORAGE_KEY = 'continental.authApiBaseUrl';
 const USERNAME_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{1,28}[A-Za-z0-9])?$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const BLOCKED_NAME_FRAGMENTS = [
+  'anal',
+  'anus',
+  'arse',
+  'asshole',
+  'bastard',
+  'beaner',
+  'bitch',
+  'bollock',
+  'boner',
+  'boob',
+  'buttplug',
+  'chink',
+  'clit',
+  'cock',
+  'coon',
+  'crackhead',
+  'cum',
+  'cuck',
+  'cunt',
+  'deepthroat',
+  'dick',
+  'dildo',
+  'dyke',
+  'ejaculate',
+  'fag',
+  'faggot',
+  'felch',
+  'fuck',
+  'gangbang',
+  'genital',
+  'gook',
+  'handjob',
+  'hentai',
+  'hitler',
+  'jackoff',
+  'jizz',
+  'kike',
+  'kkk',
+  'nazi',
+  'nigga',
+  'nigger',
+  'nutsack',
+  'orgasm',
+  'penis',
+  'piss',
+  'porn',
+  'prick',
+  'pussy',
+  'queef',
+  'rapist',
+  'rape',
+  'retard',
+  'rimjob',
+  'scrotum',
+  'sex',
+  'shit',
+  'slut',
+  'spic',
+  'tit',
+  'tranny',
+  'twat',
+  'vagina',
+  'wank',
+  'whore',
+];
 const params = new URLSearchParams(window.location.search);
 
 const trimTrailingSlash = (value) => String(value || '').replace(/\/+$/, '');
 const safeText = (value) => String(value || '').trim();
+const normalizeForModeration = (value) =>
+  safeText(value)
+    .toLowerCase()
+    .replace(/[0134@5$7+8]/g, (char) => {
+      if (char === '0') return 'o';
+      if (char === '1') return 'i';
+      if (char === '3') return 'e';
+      if (char === '4' || char === '@') return 'a';
+      if (char === '5' || char === '$') return 's';
+      if (char === '7' || char === '+') return 't';
+      if (char === '8') return 'b';
+      return char;
+    })
+    .replace(/[^a-z0-9]+/g, '')
+    .replace(/(.)\1{2,}/g, '$1');
+const buildModerationVariants = (value) => {
+  const normalized = normalizeForModeration(value);
+  if (!normalized) return [];
+
+  const collapsedPairs = normalized.replace(/(.)\1+/g, '$1');
+  return Array.from(new Set([normalized, collapsedPairs])).filter(Boolean);
+};
+const containsBlockedNameTerm = (value) => {
+  const variants = buildModerationVariants(value);
+  return variants.some((variant) => BLOCKED_NAME_FRAGMENTS.some((fragment) => variant.includes(fragment)));
+};
 const HOSTED_APP_HOSTS = new Set(
   [...TRUSTED_APP_ORIGINS]
     .map((origin) => {
@@ -35,6 +127,7 @@ const registerPanel = document.getElementById('register-panel');
 const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
 const loginBtn = document.getElementById('login-btn');
+const loginPasskeyBtn = document.getElementById('login-passkey-btn');
 const registerBtn = document.getElementById('register-btn');
 const loginPrimaryFields = document.getElementById('login-primary-fields');
 const loginMfaStep = document.getElementById('login-mfa-step');
@@ -193,7 +286,12 @@ const ensureApiBaseUrl = async () => {
     );
   })();
 
-  return apiBaseResolutionPromise;
+  try {
+    return await apiBaseResolutionPromise;
+  } catch (error) {
+    apiBaseResolutionPromise = null;
+    throw error;
+  }
 };
 
 const isTrustedAppOrigin = (origin) => {
@@ -238,7 +336,17 @@ const resolveRedirectUrl = (value, fallbackOrigin) => {
   }
 };
 
-const redirectUrl = resolveRedirectUrl(params.get('redirect'), targetOrigin);
+const getRedirectUrl = () => {
+  const redirectUrl = new URL(resolveRedirectUrl(params.get('redirect'), targetOrigin));
+  const apiBaseUrl =
+    trimTrailingSlash(API_BASE_URL) || resolveTrustedApiBaseUrl(params.get('apiBaseUrl'));
+
+  if (apiBaseUrl) {
+    redirectUrl.searchParams.set('apiBaseUrl', apiBaseUrl);
+  }
+
+  return redirectUrl.toString();
+};
 
 const setStatus = (message, tone = 'error') => {
   const text = safeText(message);
@@ -302,7 +410,7 @@ const finishAuth = (payload) => {
     return;
   }
 
-  window.location.href = redirectUrl;
+  window.location.href = getRedirectUrl();
 };
 
 const parseJson = async (res) => {
@@ -445,10 +553,22 @@ const validateRegisterForm = () => {
       'Usernames must start and end with letters or numbers and may include dots, hyphens, or underscores.'
     );
     valid = false;
+  } else if (containsBlockedNameTerm(username)) {
+    setFieldError(
+      registerUsernameInput,
+      'Choose a different username. Usernames cannot contain offensive or hateful language.'
+    );
+    valid = false;
   }
 
   if (displayName.length > 60) {
     setFieldError(registerDisplayNameInput, 'Display name must be 60 characters or fewer.');
+    valid = false;
+  } else if (displayName && containsBlockedNameTerm(displayName)) {
+    setFieldError(
+      registerDisplayNameInput,
+      'Choose a different display name. Display names cannot contain offensive or hateful language.'
+    );
     valid = false;
   }
 
@@ -762,6 +882,66 @@ const requestAuth = async (endpoint, body, submitButton, labels) => {
   }
 };
 
+const handlePasskeySignIn = async () => {
+  if (!window.WebAuthnJson?.isSupported?.()) {
+    setStatus('This browser does not support passkeys.', 'error');
+    return;
+  }
+
+  resetLoginChallenge({ clearStatus: true });
+  showVerificationActions(false);
+  setBusy(loginPasskeyBtn, true, 'Sign in with passkey', 'Preparing...');
+  setStatus('Preparing passkey sign-in...', 'info');
+
+  try {
+    await ensureApiBaseUrl();
+    const optionsResponse = await fetch(`${getAuthApiBase()}/passkeys/authenticate/options`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({}),
+    });
+    const optionsPayload = await parseJson(optionsResponse);
+    if (!optionsResponse.ok) {
+      throw new Error(optionsPayload.message || 'Failed to start passkey sign-in.');
+    }
+
+    const credential = await window.WebAuthnJson.get(optionsPayload.options);
+    setStatus('Verifying passkey...', 'info');
+
+    const verifyResponse = await fetch(`${getAuthApiBase()}/passkeys/authenticate/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ credential }),
+    });
+    const verifyPayload = await parseJson(verifyResponse);
+
+    if (!verifyResponse.ok) {
+      if (verifyPayload.requiresVerification) {
+        pendingVerificationIdentifier = '';
+        showVerificationActions(true);
+      }
+      throw new Error(verifyPayload.message || 'Failed to complete passkey sign-in.');
+    }
+
+    pendingVerificationIdentifier = '';
+    clearCooldown();
+    resetLoginChallenge();
+    showVerificationActions(false);
+    setStatus('Success. Continuing...', 'success');
+    finishAuth(verifyPayload);
+  } catch (error) {
+    if (error?.name === 'NotAllowedError') {
+      setStatus('Passkey sign-in was cancelled or timed out.', 'warn');
+      return;
+    }
+    setStatus(getRequestErrorMessage(error, 'Passkey sign-in failed.'), 'error');
+  } finally {
+    setBusy(loginPasskeyBtn, false, 'Sign in with passkey', 'Preparing...');
+  }
+};
+
 loginToggle.addEventListener('click', () => switchTabs('login'));
 registerToggle.addEventListener('click', () => switchTabs('register'));
 loginToggle.addEventListener('keydown', handleAuthTabKeydown);
@@ -788,6 +968,11 @@ verificationResetBtn.addEventListener('click', () => {
 openFullPageLink.href = window.location.href;
 openFullPageLink.target = '_blank';
 openFullPageLink.rel = 'noopener noreferrer';
+
+if (loginPasskeyBtn) {
+  loginPasskeyBtn.disabled = !window.WebAuthnJson?.isSupported?.();
+  loginPasskeyBtn.addEventListener('click', handlePasskeySignIn);
+}
 
 for (const toggle of document.querySelectorAll('[data-password-toggle]')) {
   toggle.addEventListener('click', () => togglePasswordVisibility(toggle));
