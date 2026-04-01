@@ -11,8 +11,14 @@ This repo contains the standalone authentication pages used by Continental produ
 - `index.html`: small redirect page that forwards to `popup.html`
 - `popup.html`: main login/register interface
 - `verify.html`: email verification page
+- `reset-password.html`: password reset flow
+- `auth.css`: shared auth styling
+- `auth-config.js`: shared runtime config
+- `popup.js`, `verify.js`, `reset-password.js`: auth page logic
 - `CNAME`: custom domain configuration for `login.continental-hub.com`
 - `Old login/` and `idk/`: older retained copies of the auth pages
+
+The current source copy lives in `Dashboard/login popup/` and is mirrored into this repo with `bash ../Dashboard/scripts/sync-login-popup.sh`.
 
 ## Behavior
 
